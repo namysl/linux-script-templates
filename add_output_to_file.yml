@@ -1,0 +1,23 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+  serial: 50
+
+
+  tasks:
+
+  - name: Delete file
+    shell: "echo '' > /var/ansible-dir/en_test"
+    delegate_to: localhost
+
+  - name: Check uptime
+    shell: 'uptime'
+    register: my_output
+    ignore_errors: yes
+
+  - name: Write to file
+    lineinfile:
+      dest: /var/ansible-dir/en_test
+      line: "{{ ansible_hostname }} {{ my_output.stdout }}"
+    delegate_to: localhost 

@@ -1,0 +1,16 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+  serial: 50
+
+
+  tasks:
+  - name: Copy the script to some dir
+    copy: 
+      src: /var/ansible-dir/some_script.sh
+      dest: /some_dir
+    delegate_to: localhost
+
+  - name: Execute the script
+    script: /some_dir/some_script.sh 
