@@ -1,0 +1,26 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+  serial: 50
+
+  tasks:
+
+  - name: Delete old file
+    shell: "echo '' > /var/ansible-dir/enamysl/docker_test/images_scan/{{ansible_hostname}}.txt"
+    delegate_to: localhost
+
+  - name: Looking for inactive containers
+    shell: "docker system df -v | grep -v mirantis | sed -n '/^REPOSITORY\|^abc\|^xyz\|^qwerty/p' | (sed -u 1q; sort -k1,1 -k2r) | (sed -u 1q; sed -n '/0$/p')"
+    register: my_output
+    ignore_errors: yes
+
+  - name: Write to file
+    lineinfile:
+      dest: /var/ansible-dir/enamysl/docker_test/images_scan/{{ansible_hostname}}.txt
+      line: "{{ ansible_hostname }} \n {{ my_output.stdout }} \n\n"
+    delegate_to: localhost
+
+  - name: Print to Ansible console
+    debug:
+      msg: " {{ my_output.stdout }} "
