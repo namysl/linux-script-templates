@@ -1,0 +1,36 @@
+---
+- hosts: all
+  become: yes
+  become_user: root
+
+  tasks:
+
+  - name: Delete old file
+    shell: "echo '' > /var/ansible-dir/enamysl/docker_test/freespace.txt"
+    run_once: true
+    delegate_to: localhost
+
+  - name: Looking for FS with more than 90% space used
+    shell: "df -P | grep '/var/log' | awk '$5+0 >=90 {print}'"
+    register: my_output
+    ignore_errors: yes
+
+  - name: Write to file
+    lineinfile:
+      dest: /var/ansible-dir/enamysl/docker_test/freespace.txt
+      line: "{{ ansible_hostname }} \n {{ my_output.stdout }} \n\n"
+    when: my_output.stdout != ""
+    delegate_to: localhost
+
+  - name: Send email
+    become: false
+    mail:
+      attach: /var/ansible-dir/enamysl/docker_test/freespace.txt
+      to: docker@somedomain.com
+      subject: 'Status of /var/log {{ansible_date_time.date}}'
+      body: 'Status of /var/log in the attached file :)'
+      host: exchange.xyz.somedomain.com
+      from: "docker_varlog_notification@somedomain.com"
+      secure: never
+    run_once: true
+    delegate_to: localhost 
