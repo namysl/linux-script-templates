@@ -2,12 +2,17 @@
 - hosts: all
   become: yes
   become_user: root
-  serial: 50
 
   tasks:
 
-  - name: Delete old file
-    shell: "echo '' > /var/ansible-dir/enamysl/docker_test/images_scan/{{ansible_hostname}}.txt"
+  - name: Delete old files
+    shell: "rm -f /var/ansible-dir/enamysl/docker_test/images_scan/*"
+    run_once: true
+    delegate_to: localhost
+
+  - name: Delete old file for Python
+    shell: "echo '' > /var/ansible-dir/enamysl/docker_test/inactive_containers.txt"
+    run_once: true
     delegate_to: localhost
 
   - name: Looking for inactive containers
@@ -19,8 +24,25 @@
     lineinfile:
       dest: /var/ansible-dir/enamysl/docker_test/images_scan/{{ansible_hostname}}.txt
       line: "{{ ansible_hostname }} \n {{ my_output.stdout }} \n\n"
+      create: yes
+    when: my_output.stdout != ""
     delegate_to: localhost
 
-  - name: Print to Ansible console
-    debug:
-      msg: " {{ my_output.stdout }} "
+  - name: Run Python script to clean the output and concatenate it to one file
+    shell: "python3 /var/ansible-dir/enamysl/docker_test/iterate_files_new.py"
+    run_once: true
+    ignore_errors: yes
+    delegate_to: localhost
+
+  - name: Send email
+    become: false
+    mail:
+      attach: /var/ansible-dir/enamysl/docker_test/inactive_containers.txt
+      to: enamysl@somedomain.com
+      subject: 'Status of inactive containers {{ansible_date_time.date}}'
+      body: 'Status of inactive containers in the attached file :)'
+      host: exchange.xyz.somedomain.com
+      from: "docker_containers_notification@somedomain.com"
+      secure: never
+    run_once: true
+    delegate_to: localhost 
